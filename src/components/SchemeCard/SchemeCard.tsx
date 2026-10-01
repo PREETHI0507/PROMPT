@@ -7,7 +7,7 @@ interface SchemeCardProps {
   onSelect: (schemeId: string) => void;
 }
 
-export const SchemeCard: React.FC<SchemeCardProps> = ({ scheme, onSelect }) => {
+export const SchemeCard: React.FC<SchemeCardProps> = React.memo(({ scheme, onSelect }) => {
   return (
     <div className="bg-white border-2 border-stone-200 hover:border-amber-500 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-150 flex flex-col justify-between text-left group">
       <div>
@@ -54,11 +54,12 @@ export const SchemeCard: React.FC<SchemeCardProps> = ({ scheme, onSelect }) => {
       {/* Action Button */}
       <button
         onClick={() => onSelect(scheme.id)}
-        className="w-full mt-2 py-3 px-4 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer group-hover:shadow"
+        aria-label={`${scheme.name} பற்றி அறியவும் (Learn about this scheme)`}
+        className="w-full mt-2 py-3 px-4 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer group-hover:shadow focus:outline-none focus:ring-2 focus:ring-amber-500"
       >
         <span>இதைப் பற்றி அறியவும் (Learn about this)</span>
         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
       </button>
     </div>
   );
-};
+});

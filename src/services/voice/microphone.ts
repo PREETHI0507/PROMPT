@@ -134,6 +134,7 @@ export class MicrophoneService {
 
     if (this.processorNode) {
       try {
+        this.processorNode.onaudioprocess = null;
         this.processorNode.disconnect();
       } catch {
         // Ignore disconnect errors

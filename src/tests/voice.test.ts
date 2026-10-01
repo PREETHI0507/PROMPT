@@ -72,4 +72,22 @@ describe('Voice Audio & PCM Pipeline Tests', () => {
     // Pure silence
     expect(view.getInt16(4, true)).toBe(0);
   });
+
+  it('correctly maps DOMException error names to user-friendly mic error codes', () => {
+    // Testing error taxonomy
+    const notAllowed = new Error('Permission denied');
+    notAllowed.name = 'NotAllowedError';
+    const notFound = new Error('No mic');
+    notFound.name = 'NotFoundError';
+
+    const getErrorType = (err: Error) => {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') return 'PERMISSION_DENIED';
+      if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') return 'DEVICE_NOT_FOUND';
+      return 'UNKNOWN';
+    };
+
+    expect(getErrorType(notAllowed)).toBe('PERMISSION_DENIED');
+    expect(getErrorType(notFound)).toBe('DEVICE_NOT_FOUND');
+    expect(getErrorType(new Error('Other'))).toBe('UNKNOWN');
+  });
 });

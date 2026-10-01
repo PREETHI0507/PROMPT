@@ -9,7 +9,7 @@ interface SchemeResultsProps {
   onSelectScheme: (schemeId: string) => void;
 }
 
-export const SchemeResults: React.FC<SchemeResultsProps> = ({
+export const SchemeResults: React.FC<SchemeResultsProps> = React.memo(({
   candidateSchemeIds,
   userNeed,
   onSelectScheme,
@@ -47,4 +47,4 @@ export const SchemeResults: React.FC<SchemeResultsProps> = ({
       </div>
     </div>
   );
-};
+});

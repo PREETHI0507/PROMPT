@@ -9,13 +9,14 @@ interface LiveTranscriptProps {
   onSampleQueryClick?: (queryText: string) => void;
 }
 
-export const LiveTranscript: React.FC<LiveTranscriptProps> = ({
+export const LiveTranscript: React.FC<LiveTranscriptProps> = React.memo(({
   transcripts,
   language,
   onSampleQueryClick,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const langConfig = getLanguageConfig(language);
+  const visibleTranscripts = transcripts.length > 80 ? transcripts.slice(-80) : transcripts;
 
   useEffect(() => {
     if (containerRef.current) {
@@ -80,7 +81,7 @@ export const LiveTranscript: React.FC<LiveTranscriptProps> = ({
             )}
           </div>
         ) : (
-          transcripts.map((item) => {
+          visibleTranscripts.map((item) => {
             const isAI = item.sender === 'ai';
             return (
               <div
@@ -130,4 +131,4 @@ export const LiveTranscript: React.FC<LiveTranscriptProps> = ({
       </div>
     </div>
   );
-};
+});

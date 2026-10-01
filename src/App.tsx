@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AIGuideAvatar } from './components/AIGuide/AIGuideAvatar';
 import { DiagnosticsDrawer } from './components/Diagnostics/DiagnosticsDrawer';
 import { LanguageSelector } from './components/LanguageSelector/LanguageSelector';
@@ -67,14 +67,14 @@ export default function App() {
   }, [selectedLanguageForModal]);
 
   // Demo mode launcher for judges
-  const handleLaunchDemo = (code: SupportedLanguageCode) => {
+  const handleLaunchDemo = useCallback((code: SupportedLanguageCode) => {
     void selectLanguageAndStart(code).then(() => {
       // Send sample query after a brief delay so session connects
       setTimeout(() => {
         sendTextMessage('என் மகளுக்கு படிப்புக்கு அரசு உதவி வேண்டும்.');
       }, 1500);
     });
-  };
+  }, [selectLanguageAndStart, sendTextMessage]);
 
   return (
     <div className="min-h-screen bg-stone-100/60 text-stone-900 flex flex-col font-sans selection:bg-amber-200">

@@ -58,7 +58,20 @@ const SECTOR_DISTINCT_KEYWORDS: Record<SchemeSector, string[]> = {
   ],
 };
 
+const MATCH_CACHE = new Map<string, SchemeMatchResult[]>();
+const MAX_CACHE_SIZE = 64;
+
+function getCacheKey(options: MatchFilterOptions): string {
+  return `${options.sector || ''}|${(options.query || '').trim().toLowerCase()}|${options.girlFocusedOnly ? 1 : 0}|${options.ruralOnly ? 1 : 0}|${options.minAge || ''}|${options.maxAge || ''}`;
+}
+
 export function matchSchemes(options: MatchFilterOptions): SchemeMatchResult[] {
+  const cacheKey = getCacheKey(options);
+  const cached = MATCH_CACHE.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   const query = (options.query || '').toLowerCase().trim();
   const tokens = query.split(/[\s,]+/).filter((t) => t.length > 1);
 
@@ -132,17 +145,25 @@ export function matchSchemes(options: MatchFilterOptions): SchemeMatchResult[] {
   // Sort descending by score
   scored.sort((a, b) => b.score - a.score);
 
-  // If no match found via query, provide 3 top schemes in the detected or default sector
-  if (scored.length === 0) {
-    const targetSector = detectedSector || 'EDUCATION';
-    const fallbackList = SCHEMES.filter((s) => s.sector === targetSector).slice(0, 3);
-    return fallbackList.map((scheme) => ({
-      scheme,
-      score: 10,
-      matchReasons: ['Recommended popular government support'],
-    }));
-  }
-
   // Return top 2 to 4 results
-  return scored.slice(0, 4);
+  const finalResults = scored.length === 0
+    ? (() => {
+        const targetSector = detectedSector || 'EDUCATION';
+        const fallbackList = SCHEMES.filter((s) => s.sector === targetSector).slice(0, 3);
+        return fallbackList.map((scheme) => ({
+          scheme,
+          score: 10,
+          matchReasons: ['Recommended popular government support'],
+        }));
+      })()
+    : scored.slice(0, 4);
+
+  // Cache result with bounded cache size
+  if (MATCH_CACHE.size >= MAX_CACHE_SIZE) {
+    const oldestKey = MATCH_CACHE.keys().next().value;
+    if (oldestKey) MATCH_CACHE.delete(oldestKey);
+  }
+  MATCH_CACHE.set(cacheKey, finalResults);
+
+  return finalResults;
 }

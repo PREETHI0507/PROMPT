@@ -52,9 +52,27 @@ export const ALLOWED_ACTION_NAMES = [
   'highlightSection',
   'showGuidanceStep',
   'startApplicationGuidance',
+  'openOfficialSource',
 ] as const;
 
 export type AllowedActionName = (typeof ALLOWED_ACTION_NAMES)[number];
+
+const ACTION_NAME_MAP: Record<string, AllowedActionName> = {
+  SHOW_SCHEME_RESULTS: 'showSchemeResults',
+  showSchemeResults: 'showSchemeResults',
+  OPEN_SCHEME: 'openScheme',
+  openScheme: 'openScheme',
+  HIGHLIGHT_TARGET: 'highlightSection',
+  highlightSection: 'highlightSection',
+  SCROLL_TO_TARGET: 'highlightSection',
+  scrollToTarget: 'highlightSection',
+  SHOW_GUIDANCE_STEP: 'showGuidanceStep',
+  showGuidanceStep: 'showGuidanceStep',
+  START_APPLICATION_GUIDANCE: 'startApplicationGuidance',
+  startApplicationGuidance: 'startApplicationGuidance',
+  OPEN_OFFICIAL_SOURCE: 'openOfficialSource',
+  openOfficialSource: 'openOfficialSource',
+};
 
 export const ALLOWED_APPLICATION_ROUTES = ['CSC', 'ONLINE'] as const;
 export type ApplicationRoute = (typeof ALLOWED_APPLICATION_ROUTES)[number];
@@ -74,11 +92,12 @@ export interface ValidationResult<T> {
 }
 
 export function validateActionName(action: unknown): ValidationResult<AllowedActionName> {
-  if (typeof action !== 'string') {
-    return { isValid: false, error: 'Action name must be a string' };
+  if (typeof action !== 'string' || !action.trim()) {
+    return { isValid: false, error: 'Action name must be a non-empty string' };
   }
-  if (ALLOWED_ACTION_NAMES.includes(action as AllowedActionName)) {
-    return { isValid: true, value: action as AllowedActionName };
+  const trimmed = action.trim();
+  if (Object.prototype.hasOwnProperty.call(ACTION_NAME_MAP, trimmed)) {
+    return { isValid: true, value: ACTION_NAME_MAP[trimmed] };
   }
   return {
     isValid: false,

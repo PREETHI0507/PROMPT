@@ -197,11 +197,30 @@ export function useVoiceSession() {
       };
     }
 
+    if (actionCheck.value === 'openOfficialSource') {
+      const schemeId = call.args.schemeId;
+      const valid = validateSchemeId(schemeId);
+      const targetScheme = valid.isValid && valid.value
+        ? getSchemeById(valid.value)
+        : (contextRef.current.selectedSchemeId ? getSchemeById(contextRef.current.selectedSchemeId) : undefined);
+
+      if (targetScheme?.officialSourceUrl) {
+        return {
+          success: true,
+          officialSourceUrl: targetScheme.officialSourceUrl,
+          message: 'Official portal link verified',
+        };
+      }
+      return { error: 'Official source URL not found for scheme', rejected: true };
+    }
+
     return { error: `Tool ${call.name} is not recognized`, rejected: true };
   }, []);
 
-  // Update diagnostics periodically
+  // Update diagnostics periodically ONLY when diagnostics drawer is active
   useEffect(() => {
+    if (!diagnosticsOpen) return;
+
     const timer = setInterval(() => {
       if (!liveServiceRef.current) return;
       const player = liveServiceRef.current.getAudioPlayer();
@@ -222,7 +241,7 @@ export function useVoiceSession() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [diagnosticsOpen]);
 
   // Language selection is the SINGLE entry point that starts the entire AI and audio pipeline!
   const selectLanguageAndStart = useCallback(
@@ -246,13 +265,20 @@ export function useVoiceSession() {
         conversationStage: 'INITIALIZING',
       }));
 
+      let lastVolume = 0;
+
       // 1. Initialize microphone service
       const micService = new MicrophoneService({
         onAudioData: (base64) => {
           liveServiceRef.current?.sendAudioChunk(base64);
         },
         onVolumeChange: (vol) => {
-          setMicVolume(vol);
+          // Throttle updates: only dispatch if delta >= 0.08 or reverting to 0
+          const cleanVol = vol < 0.03 ? 0 : Math.round(vol * 10) / 10;
+          if (Math.abs(cleanVol - lastVolume) >= 0.08 || (cleanVol === 0 && lastVolume !== 0)) {
+            lastVolume = cleanVol;
+            setMicVolume(cleanVol);
+          }
         },
         onError: (errType) => {
           setMicError(errType);

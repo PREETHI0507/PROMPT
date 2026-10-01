@@ -80,6 +80,11 @@ export class GeminiAudioPlayer {
       }
 
       source.onended = () => {
+        try {
+          source.disconnect();
+        } catch {
+          // Ignore
+        }
         const idx = this.activeSources.indexOf(source);
         if (idx !== -1) {
           this.activeSources.splice(idx, 1);
@@ -124,6 +129,7 @@ export class GeminiAudioPlayer {
 
     for (const source of this.activeSources) {
       try {
+        source.onended = null;
         source.stop();
         source.disconnect();
       } catch {
@@ -164,7 +170,11 @@ export class GeminiAudioPlayer {
   public dispose(): void {
     this.stopImmediately();
     if (this.audioCtx && this.audioCtx.state !== 'closed') {
-      void this.audioCtx.close();
+      try {
+        void this.audioCtx.close();
+      } catch {
+        // Ignore
+      }
       this.audioCtx = null;
     }
   }

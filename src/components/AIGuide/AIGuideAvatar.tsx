@@ -82,7 +82,7 @@ const STATE_MESSAGES: Record<
   },
 };
 
-export const AIGuideAvatar: React.FC<AIGuideAvatarProps> = ({
+export const AIGuideAvatar: React.FC<AIGuideAvatarProps> = React.memo(({
   voiceState,
   micVolume = 0,
   language,
@@ -105,8 +105,8 @@ export const AIGuideAvatar: React.FC<AIGuideAvatarProps> = ({
         {/* Speaking animation rings */}
         {isSpeaking && (
           <>
-            <div className="absolute w-28 h-28 rounded-full bg-amber-400/30 animate-ping opacity-75" />
-            <div className="absolute w-24 h-24 rounded-full bg-amber-300/40 animate-pulse" />
+            <div className="absolute w-28 h-28 rounded-full bg-amber-400/30 animate-ping motion-reduce:animate-none opacity-75" />
+            <div className="absolute w-24 h-24 rounded-full bg-amber-300/40 animate-pulse motion-reduce:animate-none" />
           </>
         )}
 
@@ -131,7 +131,7 @@ export const AIGuideAvatar: React.FC<AIGuideAvatarProps> = ({
               : isListening
               ? 'bg-gradient-to-tr from-emerald-600 to-teal-600 text-white ring-4 ring-emerald-300 shadow-emerald-500/30'
               : isThinking
-              ? 'bg-gradient-to-tr from-indigo-600 to-blue-600 text-white ring-4 ring-indigo-200 shadow-indigo-500/20 animate-pulse'
+              ? 'bg-gradient-to-tr from-indigo-600 to-blue-600 text-white ring-4 ring-indigo-200 shadow-indigo-500/20 animate-pulse motion-reduce:animate-none'
               : 'bg-stone-800 text-white'
           }`}
         >
@@ -141,10 +141,10 @@ export const AIGuideAvatar: React.FC<AIGuideAvatarProps> = ({
 
           {/* Activity Mini Badge */}
           <span className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-white shadow flex items-center justify-center">
-            {isSpeaking && <Volume2 className="w-4 h-4 text-amber-600 animate-bounce" />}
-            {isListening && <Mic className="w-4 h-4 text-emerald-600 animate-pulse" />}
+            {isSpeaking && <Volume2 className="w-4 h-4 text-amber-600 animate-bounce motion-reduce:animate-none" />}
+            {isListening && <Mic className="w-4 h-4 text-emerald-600 animate-pulse motion-reduce:animate-none" />}
             {isThinking && (
-              <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-ping" />
+              <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-ping motion-reduce:animate-none" />
             )}
             {!isSpeaking && !isListening && !isThinking && (
               <span className="w-2.5 h-2.5 rounded-full bg-stone-400" />
@@ -178,11 +178,11 @@ export const AIGuideAvatar: React.FC<AIGuideAvatarProps> = ({
           <span
             className={`w-2 h-2 rounded-full ${
               isSpeaking
-                ? 'bg-amber-600 animate-pulse'
+                ? 'bg-amber-600 animate-pulse motion-reduce:animate-none'
                 : isListening
-                ? 'bg-emerald-600 animate-ping'
+                ? 'bg-emerald-600 animate-ping motion-reduce:animate-none'
                 : isThinking
-                ? 'bg-indigo-600 animate-pulse'
+                ? 'bg-indigo-600 animate-pulse motion-reduce:animate-none'
                 : 'bg-stone-400'
             }`}
           />
@@ -194,4 +194,4 @@ export const AIGuideAvatar: React.FC<AIGuideAvatarProps> = ({
       </div>
     </div>
   );
-};
+});

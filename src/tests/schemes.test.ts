@@ -88,4 +88,13 @@ describe('Scheme Catalog & Hybrid Matcher Tests', () => {
       expect(r.scheme.ruralRelevant).toBe(true);
     }
   });
+
+  it('memoizes match query results for fast O(1) repeated retrieval', () => {
+    const query = { sector: 'HEALTH' as const, query: 'nutrition maternity' };
+    const firstCall = matchSchemes(query);
+    const secondCall = matchSchemes(query);
+    // Same cached array reference returned without recomputation
+    expect(firstCall).toBe(secondCall);
+    expect(firstCall.length).toBeGreaterThan(0);
+  });
 });
