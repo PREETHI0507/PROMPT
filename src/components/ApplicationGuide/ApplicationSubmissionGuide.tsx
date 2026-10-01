@@ -372,14 +372,19 @@ export const ApplicationSubmissionGuide: React.FC<ApplicationSubmissionGuideProp
 
       {/* Application Slip Modal for Printing or Saving */}
       {showSlipModal && (
-        <div className="fixed inset-0 z-50 bg-stone-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="slip-modal-title"
+          className="fixed inset-0 z-50 bg-stone-950/70 backdrop-blur-xs flex items-center justify-center p-4"
+        >
           <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="border-b-2 border-stone-800 pb-4 text-center">
               <span className="text-xs font-bold text-amber-800 uppercase tracking-widest">
                 சகிசேது அரசு உதவி விண்ணப்ப வழிகாட்டி சீட்டு
               </span>
-              <h2 className="text-2xl font-black text-stone-900 mt-1">{scheme.name}</h2>
+              <h2 id="slip-modal-title" className="text-2xl font-black text-stone-900 mt-1">{scheme.name}</h2>
               <div className="text-xs text-stone-600 mt-1">
                 {scheme.sectorLabel} • அதிகாரப்பூர்வ அரசு தளம்: {scheme.officialSourceUrl}
               </div>

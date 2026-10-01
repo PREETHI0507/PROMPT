@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   sanitizeUserInput,
+  validateActionName,
+  validateApplicationRoute,
+  validateApplicationStep,
+  validateGuidanceStep,
   validateHighlightTarget,
   validateOfficialUrl,
   validateSchemeId,
   validateScreen,
+  validateSector,
 } from '../services/schemes/validator';
 
 describe('Security & Validation Tests', () => {
@@ -26,6 +31,38 @@ describe('Security & Validation Tests', () => {
 
     const invalid3 = validateOfficialUrl('javascript:alert(1)');
     expect(invalid3.isValid).toBe(false);
+  });
+
+  it('validates action names strictly against allowlist', () => {
+    expect(validateActionName('showSchemeResults').isValid).toBe(true);
+    expect(validateActionName('openScheme').isValid).toBe(true);
+    expect(validateActionName('highlightSection').isValid).toBe(true);
+    expect(validateActionName('showGuidanceStep').isValid).toBe(true);
+    expect(validateActionName('startApplicationGuidance').isValid).toBe(true);
+
+    // Rejection of arbitrary / model hallucinated actions
+    expect(validateActionName('evalCode').isValid).toBe(false);
+    expect(validateActionName('executeScript').isValid).toBe(false);
+    expect(validateActionName('downloadMalware').isValid).toBe(false);
+  });
+
+  it('validates sectors strictly against allowlist', () => {
+    expect(validateSector('EDUCATION').isValid).toBe(true);
+    expect(validateSector('AGRICULTURE').isValid).toBe(true);
+    expect(validateSector('INVALID_SECTOR').isValid).toBe(false);
+    expect(validateSector(null).isValid).toBe(false);
+  });
+
+  it('validates guidance steps and application routes with safe fallbacks', () => {
+    expect(validateGuidanceStep('OVERVIEW').isValid).toBe(true);
+    expect(validateGuidanceStep('DOCUMENTS').isValid).toBe(true);
+    expect(validateGuidanceStep('UNKNOWN_STEP').isValid).toBe(false);
+
+    expect(validateApplicationRoute('ONLINE').value).toBe('ONLINE');
+    expect(validateApplicationRoute('UNKNOWN').value).toBe('CSC');
+
+    expect(validateApplicationStep('ROUTE').value).toBe('ROUTE');
+    expect(validateApplicationStep('INVALID').value).toBe('CHECKLIST');
   });
 
   it('validates highlight targets against allowlist', () => {

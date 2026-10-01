@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AIGuideAvatar } from './components/AIGuide/AIGuideAvatar';
 import { DiagnosticsDrawer } from './components/Diagnostics/DiagnosticsDrawer';
 import { LanguageSelector } from './components/LanguageSelector/LanguageSelector';
@@ -18,6 +18,8 @@ export default function App() {
     micActive,
     micVolume,
     micError,
+    securityNotice,
+    dismissSecurityNotice,
     diagnostics,
     diagnosticsOpen,
     setDiagnosticsOpen,
@@ -32,12 +34,37 @@ export default function App() {
 
   const [selectedLanguageForModal, setSelectedLanguageForModal] =
     useState<boolean>(false);
+  const [screenAnnouncement, setScreenAnnouncement] = useState<string>('');
 
   const currentScheme = context.selectedSchemeId
     ? getSchemeById(context.selectedSchemeId)
     : undefined;
 
   const langConfig = getLanguageConfig(context.language);
+
+  // Announce screen transitions to assistive tech
+  useEffect(() => {
+    if (context.currentScreen === 'LANGUAGE') {
+      setScreenAnnouncement('Language selection screen. Choose your language to begin speaking.');
+    } else if (context.currentScreen === 'DISCOVERY') {
+      setScreenAnnouncement(`Discovery screen in ${langConfig.englishName}. SakhiSetu AI is listening.`);
+    } else if (context.currentScreen === 'SCHEME_RESULTS') {
+      setScreenAnnouncement(`Showing ${context.candidateSchemeIds.length} recommended government schemes.`);
+    } else if (context.currentScreen === 'SCHEME_DETAILS' && currentScheme) {
+      setScreenAnnouncement(`Viewing guided details for ${currentScheme.name}.`);
+    }
+  }, [context.currentScreen, context.candidateSchemeIds.length, currentScheme, langConfig.englishName]);
+
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedLanguageForModal) {
+        setSelectedLanguageForModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedLanguageForModal]);
 
   // Demo mode launcher for judges
   const handleLaunchDemo = (code: SupportedLanguageCode) => {
@@ -51,11 +78,24 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-stone-100/60 text-stone-900 flex flex-col font-sans selection:bg-amber-200">
+      {/* Skip to Content Link for Keyboard Accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:bg-amber-700 focus:text-white focus:rounded-xl focus:font-bold focus:shadow-lg focus:outline-none"
+      >
+        முக்கிய பகுதிக்கு செல்லவும் (Skip to main content)
+      </a>
+
+      {/* Screen Reader Live Announcement */}
+      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {screenAnnouncement}
+      </div>
+
       {/* Top Navbar */}
-      <header className="bg-white border-b border-stone-200/90 sticky top-0 z-20 shadow-xs">
+      <header role="banner" className="bg-white border-b border-stone-200/90 sticky top-0 z-20 shadow-xs">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-600 to-orange-500 text-white flex items-center justify-center font-bold text-xl shadow-xs">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-600 to-orange-500 text-white flex items-center justify-center font-bold text-xl shadow-xs" aria-hidden="true">
               👩‍💼
             </div>
             <div>
@@ -72,7 +112,8 @@ export default function App() {
             {context.currentScreen !== 'LANGUAGE' && (
               <button
                 onClick={() => setSelectedLanguageForModal(true)}
-                className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+                aria-label={`Current language: ${langConfig.name}. Click to change language.`}
+                className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
                 <span>{langConfig.name}</span>
                 <span className="text-stone-400 font-normal">| மாற்றவும்</span>
@@ -81,8 +122,9 @@ export default function App() {
 
             <button
               onClick={() => setDiagnosticsOpen(!diagnosticsOpen)}
-              className="px-2.5 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-xs font-medium cursor-pointer"
+              className="px-2.5 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-xs font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500"
               title="Diagnostics Panel"
+              aria-label="Toggle developer diagnostics panel"
             >
               ⚙️ Debug
             </button>
@@ -90,8 +132,29 @@ export default function App() {
         </div>
       </header>
 
+      {/* Security Notification Banner (Thread-safe, accessible in-app alert) */}
+      {securityNotice && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="bg-amber-50 border-b border-amber-300 px-4 py-2.5 text-amber-950 text-xs sm:text-sm flex items-center justify-between shadow-xs sticky top-[57px] z-19"
+        >
+          <div className="flex items-center gap-2 max-w-4xl mx-auto w-full">
+            <span className="font-bold text-base" aria-hidden="true">🛡️</span>
+            <span className="flex-1 font-medium">{securityNotice}</span>
+            <button
+              onClick={dismissSecurityNotice}
+              aria-label="Dismiss security notice"
+              className="ml-2 px-2.5 py-1 bg-amber-200/80 hover:bg-amber-300 text-amber-900 font-bold rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-600"
+            >
+              சரி (OK)
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col">
+      <main id="main-content" tabIndex={-1} className="flex-1 flex flex-col focus:outline-none">
         {/* Screen 1: Language Selection */}
         {context.currentScreen === 'LANGUAGE' && (
           <LanguageSelector
@@ -218,9 +281,14 @@ export default function App() {
 
       {/* Change Language Modal */}
       {selectedLanguageForModal && (
-        <div className="fixed inset-0 z-50 bg-stone-950/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="language-modal-title"
+          className="fixed inset-0 z-50 bg-stone-950/50 backdrop-blur-xs flex items-center justify-center p-4"
+        >
           <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <h3 className="text-lg font-bold text-stone-900">
+            <h3 id="language-modal-title" className="text-lg font-bold text-stone-900">
               மொழியை மாற்றவும் • Change Language
             </h3>
             <div className="grid grid-cols-2 gap-2.5">
@@ -238,7 +306,7 @@ export default function App() {
                     setSelectedLanguageForModal(false);
                     void selectLanguageAndStart(l.code as SupportedLanguageCode);
                   }}
-                  className={`p-3 rounded-xl font-bold text-sm border text-left cursor-pointer transition-all ${
+                  className={`p-3 rounded-xl font-bold text-sm border text-left cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-amber-500 ${
                     context.language === l.code
                       ? 'bg-amber-600 text-white border-amber-600'
                       : 'bg-stone-50 hover:bg-stone-100 text-stone-800 border-stone-200'
@@ -250,7 +318,7 @@ export default function App() {
             </div>
             <button
               onClick={() => setSelectedLanguageForModal(false)}
-              className="w-full py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-sm font-semibold cursor-pointer"
+              className="w-full py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-sm font-semibold cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500"
             >
               ரத்து செய் (Cancel)
             </button>

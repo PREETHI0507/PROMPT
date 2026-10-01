@@ -1,4 +1,5 @@
 import { SupportedLanguageCode, getLanguageConfig } from '../../data/languages';
+import { sanitizeUserInput } from '../schemes/validator';
 import { GeminiAudioPlayer } from '../voice/audioPlayer';
 
 export type VoiceState =
@@ -255,14 +256,16 @@ export class GeminiLiveService {
   }
 
   public sendUserTextMessage(text: string): void {
-    if (!text.trim()) return;
+    const sanitized = sanitizeUserInput(text);
+    const cleanText = sanitized.cleanText;
+    if (!cleanText.trim()) return;
 
-    this.updateTranscriptEntry('user', text);
+    this.updateTranscriptEntry('user', cleanText);
     this.setState('THINKING');
 
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       try {
-        this.ws.send(JSON.stringify({ text }));
+        this.ws.send(JSON.stringify({ text: cleanText }));
         return;
       } catch (err) {
         console.warn('[GeminiLiveService] Failed to send text via Live bridge, fallback to HTTP:', err);
@@ -270,7 +273,7 @@ export class GeminiLiveService {
     }
 
     // If WebSocket is not open, send via server text fallback
-    void this.fallbackServerChat(text);
+    void this.fallbackServerChat(cleanText);
   }
 
   private async fallbackServerChat(text: string): Promise<void> {
@@ -304,6 +307,10 @@ export class GeminiLiveService {
     this.audioPlayer.dispose();
     if (this.ws) {
       try {
+        this.ws.onopen = null;
+        this.ws.onmessage = null;
+        this.ws.onerror = null;
+        this.ws.onclose = null;
         this.ws.close();
       } catch {
         // Ignore

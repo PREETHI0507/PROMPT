@@ -1,4 +1,4 @@
-import { SCHEMES, isTrustedUrl, isValidSchemeId } from '../../data/schemes';
+import { SCHEMES, SchemeSector, isTrustedUrl, isValidSchemeId } from '../../data/schemes';
 
 export const ALLOWED_HIGHLIGHT_TARGETS = [
   'scheme-overview',
@@ -35,10 +35,105 @@ export const ALLOWED_GUIDANCE_STEPS = [
 
 export type GuidanceStep = (typeof ALLOWED_GUIDANCE_STEPS)[number];
 
+export const ALLOWED_SECTORS: SchemeSector[] = [
+  'EDUCATION',
+  'FINANCE',
+  'HEALTH',
+  'SKILLS',
+  'ENTREPRENEURSHIP',
+  'SAFETY',
+  'HOUSING',
+  'AGRICULTURE',
+];
+
+export const ALLOWED_ACTION_NAMES = [
+  'showSchemeResults',
+  'openScheme',
+  'highlightSection',
+  'showGuidanceStep',
+  'startApplicationGuidance',
+] as const;
+
+export type AllowedActionName = (typeof ALLOWED_ACTION_NAMES)[number];
+
+export const ALLOWED_APPLICATION_ROUTES = ['CSC', 'ONLINE'] as const;
+export type ApplicationRoute = (typeof ALLOWED_APPLICATION_ROUTES)[number];
+
+export const ALLOWED_APPLICATION_STEPS = [
+  'CHECKLIST',
+  'DETAILS',
+  'ROUTE',
+  'OFFICIAL_PORTAL',
+] as const;
+export type ApplicationStep = (typeof ALLOWED_APPLICATION_STEPS)[number];
+
 export interface ValidationResult<T> {
   isValid: boolean;
   value?: T;
   error?: string;
+}
+
+export function validateActionName(action: unknown): ValidationResult<AllowedActionName> {
+  if (typeof action !== 'string') {
+    return { isValid: false, error: 'Action name must be a string' };
+  }
+  if (ALLOWED_ACTION_NAMES.includes(action as AllowedActionName)) {
+    return { isValid: true, value: action as AllowedActionName };
+  }
+  return {
+    isValid: false,
+    error: `Action "${action}" is not an allowed application action`,
+  };
+}
+
+export function validateSector(sector: unknown): ValidationResult<SchemeSector> {
+  if (!sector || typeof sector !== 'string') {
+    return { isValid: false, error: 'Sector must be a non-empty string' };
+  }
+  const upper = sector.toUpperCase() as SchemeSector;
+  if (ALLOWED_SECTORS.includes(upper)) {
+    return { isValid: true, value: upper };
+  }
+  return {
+    isValid: false,
+    error: `Sector "${sector}" is not a recognized scheme sector`,
+  };
+}
+
+export function validateGuidanceStep(step: unknown): ValidationResult<GuidanceStep> {
+  if (!step || typeof step !== 'string') {
+    return { isValid: false, error: 'Guidance step must be a non-empty string' };
+  }
+  const upper = step.toUpperCase() as GuidanceStep;
+  if (ALLOWED_GUIDANCE_STEPS.includes(upper)) {
+    return { isValid: true, value: upper };
+  }
+  return {
+    isValid: false,
+    error: `Guidance step "${step}" is not recognized`,
+  };
+}
+
+export function validateApplicationRoute(route: unknown): ValidationResult<ApplicationRoute> {
+  if (typeof route !== 'string') {
+    return { isValid: true, value: 'CSC' }; // Safe default for rural users
+  }
+  const upper = route.toUpperCase() as ApplicationRoute;
+  if (ALLOWED_APPLICATION_ROUTES.includes(upper)) {
+    return { isValid: true, value: upper };
+  }
+  return { isValid: true, value: 'CSC' };
+}
+
+export function validateApplicationStep(step: unknown): ValidationResult<ApplicationStep> {
+  if (typeof step !== 'string') {
+    return { isValid: true, value: 'CHECKLIST' };
+  }
+  const upper = step.toUpperCase() as ApplicationStep;
+  if (ALLOWED_APPLICATION_STEPS.includes(upper)) {
+    return { isValid: true, value: upper };
+  }
+  return { isValid: true, value: 'CHECKLIST' };
 }
 
 export function validateHighlightTarget(targetId: unknown): ValidationResult<HighlightTargetId> {

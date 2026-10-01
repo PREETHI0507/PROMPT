@@ -2,6 +2,7 @@ import { GoogleGenAI, Modality, Session } from '@google/genai';
 import { IncomingMessage } from 'http';
 import { WebSocket, WebSocketServer } from 'ws';
 import { SupportedLanguageCode, getLanguageConfig } from '../../data/languages';
+import { sanitizeUserInput } from '../schemes/validator';
 import { getSystemInstructions } from './instructions';
 import { GEMINI_LIVE_TOOLS } from './tools';
 
@@ -158,14 +159,15 @@ export function setupLiveWebSocketBridge(wss: WebSocketServer) {
       }
 
       // Handle messages from client
-      clientWs.on('message', (data: any) => {
+      clientWs.on('message', (rawData: unknown) => {
         if (!session || isClosed) return;
 
         try {
-          const msg = JSON.parse(data.toString());
+          const textData = typeof rawData === 'string' ? rawData : rawData instanceof Buffer ? rawData.toString() : String(rawData);
+          const msg = JSON.parse(textData);
 
           // User microphone PCM audio
-          if (msg.audio) {
+          if (msg.audio && typeof msg.audio === 'string') {
             session.sendRealtimeInput({
               audio: {
                 data: msg.audio,
@@ -174,17 +176,19 @@ export function setupLiveWebSocketBridge(wss: WebSocketServer) {
             });
           }
 
-          // User text
-          if (msg.text) {
+          // User text - sanitized to remove sensitive numbers (Aadhaar, OTP) before sending to Gemini
+          if (msg.text && typeof msg.text === 'string') {
+            const sanitized = sanitizeUserInput(msg.text);
             session.sendRealtimeInput({
-              text: msg.text,
+              text: sanitized.cleanText,
             });
           }
 
           // Client tool response
           if (msg.toolResponse && Array.isArray(msg.toolResponse)) {
-            if (typeof (session as any).sendToolResponse === 'function') {
-              (session as any).sendToolResponse({ functionResponses: msg.toolResponse });
+            const anySession = session as unknown as { sendToolResponse?: (arg: { functionResponses: unknown[] }) => void };
+            if (typeof anySession.sendToolResponse === 'function') {
+              anySession.sendToolResponse({ functionResponses: msg.toolResponse });
             } else {
               session.sendRealtimeInput({
                 text: `Tool result: ${JSON.stringify(msg.toolResponse)}`,
@@ -220,12 +224,13 @@ export function setupLiveWebSocketBridge(wss: WebSocketServer) {
           session = null;
         }
       });
-    } catch (connectErr: any) {
+    } catch (connectErr: unknown) {
       console.error('[LiveBridge] Failed to connect to Gemini Live upstream:', connectErr);
       if (clientWs.readyState === WebSocket.OPEN) {
+        const errorMsg = connectErr instanceof Error ? connectErr.message : 'Failed to connect to Gemini Live service';
         clientWs.send(
           JSON.stringify({
-            error: connectErr?.message || 'Failed to connect to Gemini Live service',
+            error: errorMsg,
           })
         );
       }

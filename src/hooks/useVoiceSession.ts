@@ -5,9 +5,15 @@ import { GeminiLiveService, LiveMessageTranscriptItem, VoiceState } from '../ser
 import { matchSchemes } from '../services/schemes/matcher';
 import {
   HighlightTargetId,
+  sanitizeUserInput,
+  validateActionName,
+  validateApplicationRoute,
+  validateApplicationStep,
+  validateGuidanceStep,
   validateHighlightTarget,
   validateOfficialUrl,
   validateSchemeId,
+  validateSector,
 } from '../services/schemes/validator';
 import { MicErrorType, MicrophoneService } from '../services/voice/microphone';
 import { UserContext } from '../state/guide/types';
@@ -39,6 +45,7 @@ export function useVoiceSession() {
   const [micActive, setMicActive] = useState<boolean>(false);
   const [micVolume, setMicVolume] = useState<number>(0);
   const [micError, setMicError] = useState<MicErrorType | null>(null);
+  const [securityNotice, setSecurityNotice] = useState<string | null>(null);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState<boolean>(false);
   const [diagnostics, setDiagnostics] = useState<DiagnosticsData>({
     liveSessionStatus: 'DISCONNECTED',
@@ -65,9 +72,21 @@ export function useVoiceSession() {
   const handleToolCall = useCallback(async (call: { name: string; args: Record<string, unknown> }) => {
     console.log('[useVoiceSession] Executing tool call:', call.name, call.args);
 
-    if (call.name === 'showSchemeResults') {
-      const sector = typeof call.args.sector === 'string' ? (call.args.sector as any) : undefined;
-      const query = typeof call.args.userNeedSummary === 'string' ? call.args.userNeedSummary : '';
+    // Strict action name validation
+    const actionCheck = validateActionName(call.name);
+    if (!actionCheck.isValid || !actionCheck.value) {
+      console.warn('[useVoiceSession] Rejected unknown action:', call.name);
+      return { error: `Action ${call.name} is not permitted`, rejected: true };
+    }
+
+    if (actionCheck.value === 'showSchemeResults') {
+      const rawSector = call.args.sector;
+      const sectorValidation = validateSector(rawSector);
+      const sector = sectorValidation.isValid ? sectorValidation.value : undefined;
+
+      const rawQuery = typeof call.args.userNeedSummary === 'string' ? call.args.userNeedSummary : '';
+      const sanitized = sanitizeUserInput(rawQuery);
+      const query = sanitized.cleanText;
 
       const matched = matchSchemes({ sector, query });
       const ids = matched.map((m) => m.scheme.id);
@@ -81,18 +100,26 @@ export function useVoiceSession() {
         conversationStage: 'SHOWING_MATCHES',
       }));
 
+      // Return concise verified facts for ONLY the matched candidate schemes (Hybrid architecture)
       return {
         success: true,
         schemesShown: ids.length,
         matchedSchemeIds: ids,
+        candidateSchemes: matched.map((m) => ({
+          id: m.scheme.id,
+          name: m.scheme.name,
+          summary: m.scheme.simpleExplanation,
+          keyBenefit: m.scheme.benefits[0] || '',
+          targetAudience: m.scheme.targetAudience,
+        })),
       };
     }
 
-    if (call.name === 'openScheme') {
+    if (actionCheck.value === 'openScheme') {
       const schemeId = call.args.schemeId;
       const valid = validateSchemeId(schemeId);
       if (!valid.isValid || !valid.value) {
-        return { error: valid.error };
+        return { error: valid.error, rejected: true };
       }
 
       setContext((prev) => ({
@@ -111,11 +138,11 @@ export function useVoiceSession() {
       };
     }
 
-    if (call.name === 'highlightSection') {
+    if (actionCheck.value === 'highlightSection') {
       const targetId = call.args.targetId;
       const valid = validateHighlightTarget(targetId);
       if (!valid.isValid || !valid.value) {
-        return { error: valid.error };
+        return { error: valid.error, rejected: true };
       }
 
       setContext((prev) => ({
@@ -123,7 +150,7 @@ export function useVoiceSession() {
         activeHighlightTarget: valid.value as HighlightTargetId,
       }));
 
-      // Scroll into view safely
+      // Scroll into view safely if element is present in DOM
       const el = document.getElementById(valid.value);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -135,16 +162,22 @@ export function useVoiceSession() {
       };
     }
 
-    if (call.name === 'showGuidanceStep') {
-      const stepName = String(call.args.stepName || 'OVERVIEW');
+    if (actionCheck.value === 'showGuidanceStep') {
+      const stepCheck = validateGuidanceStep(call.args.stepName);
+      const stepName = stepCheck.isValid && stepCheck.value ? stepCheck.value : 'OVERVIEW';
       setContext((prev) => ({
         ...prev,
-        currentGuidanceStep: stepName as any,
+        currentGuidanceStep: stepName,
       }));
       return { success: true, stepName };
     }
 
-    if (call.name === 'startApplicationGuidance') {
+    if (actionCheck.value === 'startApplicationGuidance') {
+      const routeCheck = validateApplicationRoute(call.args.route);
+      const stepCheck = validateApplicationStep(call.args.currentStep);
+      const route = routeCheck.value || 'CSC';
+      const step = stepCheck.value || 'CHECKLIST';
+
       setContext((prev) => ({
         ...prev,
         currentGuidanceStep: 'APPLICATION',
@@ -158,13 +191,13 @@ export function useVoiceSession() {
 
       return {
         success: true,
-        route: call.args.route || 'CSC',
-        step: call.args.currentStep || 'CHECKLIST',
+        route,
+        step,
         guided: true,
       };
     }
 
-    return { error: `Tool ${call.name} is not recognized` };
+    return { error: `Tool ${call.name} is not recognized`, rejected: true };
   }, []);
 
   // Update diagnostics periodically
@@ -346,13 +379,28 @@ export function useVoiceSession() {
     }
   }, []);
 
+  const dismissSecurityNotice = useCallback(() => {
+    setSecurityNotice(null);
+  }, []);
+
   const openOfficialUrl = useCallback((url: string) => {
     const validated = validateOfficialUrl(url);
     if (!validated.isValid || !validated.value) {
-      alert('Security notice: Only verified government portals can be opened.');
+      setSecurityNotice(
+        'பாதுகாப்பு அறிவிப்பு: சரிபார்க்கப்பட்ட அரசு போர்ட்டல்கள் மட்டுமே திறக்கப்படும் (Security notice: Only verified official government portals can be opened).'
+      );
       return;
     }
-    window.open(validated.value, '_blank', 'noopener,noreferrer');
+    try {
+      const win = window.open(validated.value, '_blank', 'noopener,noreferrer');
+      if (!win) {
+        setSecurityNotice(
+          'உலவி பாப்அப் தடுக்கப்பட்டுள்ளது. அதிகாரப்பூர்வ தளத்தை திறக்க பாப்அப் அனுமதிக்கவும் (Popup was blocked by your browser. Please allow popups to open the official portal).'
+        );
+      }
+    } catch {
+      setSecurityNotice('இணைப்பைத் திறக்க முடியவில்லை (Unable to open official portal link).');
+    }
   }, []);
 
   // Cleanup on unmount
@@ -360,9 +408,11 @@ export function useVoiceSession() {
     return () => {
       if (micServiceRef.current) {
         micServiceRef.current.stop();
+        micServiceRef.current = null;
       }
       if (liveServiceRef.current) {
         liveServiceRef.current.stop();
+        liveServiceRef.current = null;
       }
     };
   }, []);
@@ -374,6 +424,8 @@ export function useVoiceSession() {
     micActive,
     micVolume,
     micError,
+    securityNotice,
+    dismissSecurityNotice,
     diagnostics,
     diagnosticsOpen,
     setDiagnosticsOpen,

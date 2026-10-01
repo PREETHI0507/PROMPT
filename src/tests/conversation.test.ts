@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { SUPPORTED_LANGUAGES } from '../data/languages';
+import { getLanguageConfig, SUPPORTED_LANGUAGES, SupportedLanguageCode } from '../data/languages';
 import { getSystemInstructions } from '../services/gemini/instructions';
+import { GEMINI_LIVE_TOOLS } from '../services/gemini/tools';
 
 describe('Conversation & Language Tests', () => {
   it('generates system instructions for all 6 supported languages', () => {
@@ -26,5 +27,23 @@ describe('Conversation & Language Tests', () => {
       expect(lang.questionText.length).toBeGreaterThan(5);
       expect(lang.sampleQueries.length).toBeGreaterThan(0);
     }
+  });
+
+  it('gracefully falls back to default language for unknown language codes', () => {
+    const fallback = getLanguageConfig('unknown-code' as SupportedLanguageCode);
+    expect(fallback).toBeDefined();
+    expect(fallback.code).toBe('ta-IN');
+  });
+
+  it('declares all 5 controlled tool functions in GEMINI_LIVE_TOOLS', () => {
+    const declarations = GEMINI_LIVE_TOOLS[0].functionDeclarations;
+    expect(declarations.length).toBe(5);
+
+    const names = declarations.map((d) => d.name);
+    expect(names).toContain('showSchemeResults');
+    expect(names).toContain('openScheme');
+    expect(names).toContain('highlightSection');
+    expect(names).toContain('showGuidanceStep');
+    expect(names).toContain('startApplicationGuidance');
   });
 });

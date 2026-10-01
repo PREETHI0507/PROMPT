@@ -337,12 +337,17 @@ export const SchemeDetails: React.FC<SchemeDetailsProps> = ({
 
       {/* Safety Departure Modal */}
       {showExitWarningModal && (
-        <div className="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="exit-modal-title"
+          className="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-xs flex items-center justify-center p-4"
+        >
           <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-stone-200 space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center" aria-hidden="true">
               <AlertCircle className="w-6 h-6" />
             </div>
-            <h4 className="text-lg font-bold text-stone-900">
+            <h4 id="exit-modal-title" className="text-lg font-bold text-stone-900">
               அதிகாரப்பூர்வ அரசு தளத்திற்குச் செல்கிறீர்கள்
             </h4>
             <p className="text-stone-600 text-sm leading-relaxed">
@@ -353,7 +358,7 @@ export const SchemeDetails: React.FC<SchemeDetailsProps> = ({
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 onClick={() => setShowExitWarningModal(false)}
-                className="px-4 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl font-semibold text-sm cursor-pointer"
+                className="px-4 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl font-semibold text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
                 திரும்பு (Cancel)
               </button>
@@ -362,7 +367,7 @@ export const SchemeDetails: React.FC<SchemeDetailsProps> = ({
                   setShowExitWarningModal(false);
                   onOpenOfficialUrl(scheme.officialSourceUrl);
                 }}
-                className="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-bold text-sm cursor-pointer shadow-sm flex items-center gap-1.5"
+                className="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-bold text-sm cursor-pointer shadow-sm flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
                 <span>தொடரவும் (Proceed)</span>
                 <ExternalLink className="w-4 h-4" />

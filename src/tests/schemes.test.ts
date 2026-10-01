@@ -67,4 +67,25 @@ describe('Scheme Catalog & Hybrid Matcher Tests', () => {
       expect(r.scheme.girlFocused).toBe(true);
     }
   });
+
+  it('limits candidate results to maximum 4 schemes to avoid cognitive overload', () => {
+    const results = matchSchemes({ sector: 'EDUCATION', query: 'scholarship college school' });
+    expect(results.length).toBeLessThanOrEqual(4);
+    expect(results.length).toBeGreaterThan(0);
+  });
+
+  it('returns safe fallback popular schemes when query has no direct keyword match', () => {
+    const fallbackResults = matchSchemes({ query: 'xyz random non-matching text 12345' });
+    expect(fallbackResults.length).toBeGreaterThan(0);
+    expect(fallbackResults[0].scheme).toBeDefined();
+    expect(fallbackResults[0].matchReasons[0]).toContain('Recommended popular');
+  });
+
+  it('filters by rural relevance accurately', () => {
+    const ruralResults = matchSchemes({ ruralOnly: true, sector: 'AGRICULTURE' });
+    expect(ruralResults.length).toBeGreaterThan(0);
+    for (const r of ruralResults) {
+      expect(r.scheme.ruralRelevant).toBe(true);
+    }
+  });
 });

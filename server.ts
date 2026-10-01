@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { sanitizeUserInput } from './src/services/schemes/validator';
 
 dotenv.config();
 
@@ -48,6 +49,10 @@ app.post('/api/gemini/chat', async (req, res) => {
       return res.status(500).json({ error: 'GEMINI_API_KEY missing' });
     }
 
+    const rawMessage = typeof req.body?.message === 'string' ? req.body.message : 'வணக்கம்';
+    const cleanMessage = sanitizeUserInput(rawMessage).cleanText;
+    const langCode = typeof req.body?.language === 'string' ? req.body.language : 'ta-IN';
+
     const serverAi = new GoogleGenAI({
       apiKey,
       httpOptions: {
@@ -57,17 +62,18 @@ app.post('/api/gemini/chat', async (req, res) => {
 
     const response = await serverAi.models.generateContent({
       model: 'gemini-3.8-flash',
-      contents: req.body.message || 'வணக்கம்',
+      contents: cleanMessage,
       config: {
         systemInstruction:
-          'You are SakhiSetu AI, an empathetic rural guide for women in India. Speak in 1 to 2 short sentences in the requested language. Do not ask for Aadhaar or passwords.',
+          `You are SakhiSetu AI, an empathetic rural guide for women in India. Speak in 1 to 2 short sentences in the requested language (${langCode}). Do not ask for Aadhaar or passwords.`,
       },
     });
 
     res.json({ reply: response.text });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errMessage = err instanceof Error ? err.message : 'Chat error';
     console.error('[Server] Chat fallback error:', err);
-    res.status(500).json({ error: err?.message || 'Chat error' });
+    res.status(500).json({ error: errMessage });
   }
 });
 
