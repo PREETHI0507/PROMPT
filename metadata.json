@@ -1,0 +1,10 @@
+{
+  "name": "SakhiSetu AI",
+  "description": "Just speak. I’ll guide you. A voice-first, real-time AI guide navigating government support for first-time rural women internet users.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
